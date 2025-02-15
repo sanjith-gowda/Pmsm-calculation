@@ -1,0 +1,167 @@
+<meta name='viewport' content='width=device-width, initial-scale=1'/><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>PMSM Motor Calculator</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 20px;
+            max-width: 450px;
+            margin: auto;
+            background-color: #f8f9fa;
+            color: #333;
+        }
+        
+        h2 {
+            text-align: center;
+        }
+
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        label {
+            font-weight: bold;
+            margin-top: 10px;
+            display: block;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            margin-top: 5px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            margin-top: 15px;
+            background-color: #007bff;
+            color: white;
+            font-size: 18px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .result {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>PMSM Motor Calculator</h2>
+
+    <div class="container">
+        <label for="wheelRadius">Wheel Radius (m):</label>
+        <input type="number" id="wheelRadius" step="0.001" value="0.222">
+
+        <label for="transmissionRatio">Transmission Ratio:</label>
+        <input type="number" id="transmissionRatio" step="0.1" value="4">
+
+        <label for="vehicleSpeed">Vehicle Speed (km/h):</label>
+        <input type="number" id="vehicleSpeed" step="0.1" value="40">
+
+        <label for="kerbWeight">Kerb Weight (kg):</label>
+        <input type="number" id="kerbWeight" step="0.1" value="198">
+
+        <label for="transmissionEfficiency">Transmission Efficiency (%):</label>
+        <input type="number" id="transmissionEfficiency" step="0.1" value="90">
+
+        <label for="dcVoltage">DC Voltage (V):</label>
+        <input type="number" id="dcVoltage" step="1" value="48">
+
+        <label for="efficiency">Efficiency (%):</label>
+        <input type="number" id="efficiency" step="0.1" value="90">
+
+        <label for="powerFactor">Power Factor:</label>
+        <input type="number" id="powerFactor" step="0.01" value="0.85">
+
+        <label for="backEmfConst">Back EMF Constant (V/RPM):</label>
+        <input type="number" id="backEmfConst" step="0.0001" value="0.0113">
+
+        <label for="phaseResistance">Winding Phase Resistance (mΩ):</label>
+        <input type="number" id="phaseResistance" step="0.01" value="14.75">
+
+        <button onclick="calculateValues()">Calculate</button>
+
+        <div class="result">
+            <p>Motor RPM: <span id="motorRPM">-</span></p>
+            <p>Torque at Wheel (Nm): <span id="torqueWheel">-</span></p>
+            <p>Torque at Motor (Nm): <span id="torqueMotor">-</span></p>
+            <p>Mechanical Power (W): <span id="mechPower">-</span></p>
+            <p>Electrical Power (W): <span id="elecPower">-</span></p>
+            <p>DC Current (A): <span id="dcCurrent">-</span></p>
+            <p>Back EMF Voltage (V RMS): <span id="backEmf">-</span></p>
+            <p>PMSM AC Phase Current (A RMS): <span id="acCurrent">-</span></p>
+        </div>
+    </div>
+
+    <script>
+        function calculateValues() {
+            let wheelRadius = parseFloat(document.getElementById("wheelRadius").value);
+            let transmissionRatio = parseFloat(document.getElementById("transmissionRatio").value);
+            let vehicleSpeed = parseFloat(document.getElementById("vehicleSpeed").value);
+            let kerbWeight = parseFloat(document.getElementById("kerbWeight").value);
+            let transmissionEfficiency = parseFloat(document.getElementById("transmissionEfficiency").value) / 100;
+            let dcVoltage = parseFloat(document.getElementById("dcVoltage").value);
+            let efficiency = parseFloat(document.getElementById("efficiency").value) / 100;
+            let powerFactor = parseFloat(document.getElementById("powerFactor").value);
+            let backEmfConst = parseFloat(document.getElementById("backEmfConst").value);
+            let phaseResistance = parseFloat(document.getElementById("phaseResistance").value) / 1000;
+
+            let speedMS = vehicleSpeed * 1000 / 3600;
+            let wheelAngularVelocity = speedMS / wheelRadius;
+            let wheelRPM = (wheelAngularVelocity * 60) / (2 * Math.PI);
+            let motorRPM = wheelRPM * transmissionRatio;
+
+            let rollingResistanceCoeff = 0.015;
+            let gravity = 9.81;
+            let rollingResistanceForce = rollingResistanceCoeff * kerbWeight * gravity;
+
+            let airDensity = 1.225;
+            let dragCoefficient = 0.9;
+            let frontalArea = 0.6;
+            let aerodynamicDragForce = 0.5 * dragCoefficient * frontalArea * airDensity * Math.pow(speedMS, 2);
+
+            let totalForce = rollingResistanceForce + aerodynamicDragForce;
+            let torqueWheel = totalForce * wheelRadius;
+            let torqueMotor = torqueWheel / (transmissionRatio * transmissionEfficiency);
+            
+            let mechPower = (2 * Math.PI * torqueMotor * motorRPM) / 60;
+            let elecPower = mechPower / efficiency;
+            let dcCurrent = elecPower / dcVoltage;
+            let backEmf = backEmfConst * motorRPM;
+            let acCurrent = elecPower / (Math.sqrt(3) * backEmf * powerFactor);
+
+            document.getElementById("motorRPM").innerText = motorRPM.toFixed(2);
+            document.getElementById("torqueWheel").innerText = torqueWheel.toFixed(2);
+            document.getElementById("torqueMotor").innerText = torqueMotor.toFixed(2);
+            document.getElementById("mechPower").innerText = mechPower.toFixed(2);
+            document.getElementById("elecPower").innerText = elecPower.toFixed(2);
+            document.getElementById("dcCurrent").innerText = dcCurrent.toFixed(2);
+            document.getElementById("backEmf").innerText = backEmf.toFixed(2);
+            document.getElementById("acCurrent").innerText = acCurrent.toFixed(2);
+        }
+    </script>
+
+</body>
+</html>
